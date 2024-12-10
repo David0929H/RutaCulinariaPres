@@ -1,0 +1,106 @@
+{% load static humanize %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pedidos</title>
+    <link rel="stylesheet" href="{% static 'estilos/styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body style="background-color: #E9967A;">
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'pagina_principal' %}" style="font-size: 1.8em; font-weight: bold;">RUTA CULINARIA</a>
+                
+            <div class="user-menu ms-auto">
+                {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'perfil_cliente' %}">Mis Pedidos</a></li>
+                            <li><a class="dropdown-item" href="{% url 'carrito' %}">Ver Carrito</a></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">Cerrar Sesión</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="{% url 'login_cliente' %}" class="btn btn-outline-primary me-2">Iniciar Sesión</a>
+                    <a href="{% url 'registro_cliente' %}" class="btn btn-primary">Registrarse</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>        
+</header>
+
+<div class="container mt-5">
+    <div class="alert alert-info display-1 text-center">
+        Mis Pedidos
+    </div>
+    <div class="row">
+        {% if pedidos %}
+            {% for pedido in pedidos %}
+            <div class="col-md-4">
+                <div class="card mb-4 shadow-sm" style="border-radius: 15px;">
+                    <div class="card-body">
+
+                        <h4 class="card-title mb-3">Orden ID: {{ pedido.id }}</h4>
+                        <h5 class="mt-4">Plato: {{ pedido.plato.nombre }}</h5>
+                        <div class="col-md-3">
+                            {% if pedido.plato.imagen %}
+                                <img src="{{ pedido.plato.imagen.url }}" class="img-fluid rounded-start" alt="{{ pedido.plato.nombre }}">
+                            {% else %}
+                                <img src="{% static 'no_image_available.jpg' %}" class="img-fluid" alt="No image available">
+                            {% endif %}
+                        </div>
+                        <p class="mb-0">Cantidad: {{ pedido.cantidad }}</p>
+                        <p class="mb-0">Subtotal: ${{ pedido.plato.precio|intcomma }}</p>
+                        <p><strong>Fecha de Retiro:</strong> {{ pedido.fecha_retiro }}</p>
+                        <p><strong>Hora de Retiro:</strong> {{ pedido.hora_retiro }}</p>
+                        <p><strong>Estado:</strong> 
+                            {% if pedido.estado == 'pendiente' %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% elif pedido.estado == 'aceptado' %}
+                                <span class="badge bg-success">Confirmado</span>
+                            {% elif pedido.estado == 'pagado' %}
+                                <span class="badge bg-primary">Pagado</span>
+                            {% elif pedido.estado == 'cancelado' %}
+                                <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                        </p>
+
+                        {% if pedido.estado == 'aceptado' %}
+                            <p><strong>Código de Autenticación:</strong> {{ pedido.codigo_autenticacion }}</p>
+                        {% elif pedido.estado == 'cancelado' %}
+                            <p><strong>Motivo de Cancelación:</strong> {{ pedido.motivo_rechazo }}</p>
+                        {% endif %}
+                        <div class="mt-3">
+                            <h5>Total de la Orden: ${{ pedido.precio_total|intcomma }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info text-center">
+                No tienes pedidos.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<footer class="footer text-center py-3 mt-5 bg-dark text-white">
+    <p>© 2024 Restaurante</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

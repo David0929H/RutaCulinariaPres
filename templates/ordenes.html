@@ -1,0 +1,207 @@
+{% load static humanize %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Órdenes</title>
+    <link rel="stylesheet" href="{% static 'estilos/styles.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body style="background-color: #E9967A;">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'pagina_principal' %}" style="font-size: 1.8em; font-weight: bold;">
+                RUTA CULINARIA
+            </a>
+            <div class="ms-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Administración
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'registro_pedidos' %}">Ver Registro</a></li>
+                        <li><a class="dropdown-item" href="{% url 'menu_admin' %}">Gestión de Platos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'ordenes' %}">Ver Órdenes</a></li>
+                        <li><a class="dropdown-item" href="{% url 'gestionar_clientes'%}">Gestionar clientes</a></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item">Cerrar Sesión</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+<div class="container mt-5">
+    <form method="get" class="mb-4 d-flex align-items-center gap-2">
+        <input type="text" name="query" class="form-control" placeholder="Buscar..." value="{{ query }}">
+        <div class="form-check ms-3">
+            <input type="radio" name="filtro_cliente" value="cliente" class="form-check-input" id="buscar_cliente" {% if filtro_cliente == 'cliente' %}checked{% endif %}>
+            <label for="buscar_cliente" class="form-check-label">Buscar por Cliente</label>
+        </div>
+        <div class="form-check ms-3">
+            <input type="radio" name="filtro_cliente" value="codigo" class="form-check-input" id="buscar_codigo" {% if filtro_cliente == 'codigo' %}checked{% endif %}>
+            <label for="buscar_codigo" class="form-check-label">Buscar por Código</label>
+        </div>
+        <select name="filtro_estado" class="form-select ms-3">
+            <option value="todos" {% if filtro_estado == 'todos' %}selected{% endif %}>Todos</option>
+            <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendientes</option>
+            <option value="aceptado" {% if filtro_estado == 'aceptado' %}selected{% endif %}>Confirmados</option>
+            <option value="pagado" {% if filtro_estado == 'pagado' %}selected{% endif %}>Pagados</option>
+            <option value="cancelado" {% if filtro_estado == 'cancelado' %}selected{% endif %}>Cancelados</option>
+        </select>
+        <button type="submit" class="btn btn-primary ms-3">Filtrar</button>
+    </form>
+    <h2 class="text-center mb-4">Órdenes</h2>
+    {% if pedidos %}
+        {% for pedido in pedidos %}
+        <div class="card mb-4 shadow-sm" style="border-radius: 10px;">
+            <div class="card-body">
+                <div class="col-md-3">
+                    <h5 class="card-title">{{ pedido.plato.nombre }}</h5>
+                    {% if pedido.plato.imagen %}
+                        <img src="{{ pedido.plato.imagen.url }}" class="img-fluid rounded-start" alt="{{ pedido.plato.nombre }}">
+                    {% else %}
+                        <img src="{% static 'no_image_available.jpg' %}" class="img-fluid" alt="No image available">
+                    {% endif %}
+                </div>
+            
+                <p><strong>Cliente:</strong> {{ pedido.cliente.username }}</p>
+                <p><strong>Cantidad:</strong> {{ pedido.cantidad }}</p>
+                <p><strong>Fecha de Retiro:</strong> {{ pedido.fecha_retiro }}</p>
+                <p><strong>Hora de Retiro:</strong> {{ pedido.hora_retiro }}</p>
+                <p><strong>Estado:</strong> 
+                    {% if pedido.estado == 'pendiente' %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif pedido.estado == 'aceptado' %}
+                        <span class="badge bg-success">Confirmado</span>
+                    {% elif pedido.estado == 'pagado' %}
+                        <span class="badge bg-primary">Pagado</span>
+                    {% elif pedido.estado == 'cancelado' %}
+                        <span class="badge bg-danger">Cancelado</span>
+                    {% endif %}
+                </p>
+                {% if pedido.codigo_autenticacion %}
+                    <p><strong>Código de Autenticación:</strong> {{ pedido.codigo_autenticacion }}</p>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    {% if pedido.estado == 'pendiente' %}
+                        <button class="btn btn-success" onclick="confirmarAceptar('{{ pedido.id }}')">Aceptar</button>
+                        <button class="btn btn-danger" onclick="confirmarCancelar('{{ pedido.id }}')">Rechazar</button>
+                    {% elif pedido.estado == 'aceptado' %}
+                        <button class="btn btn-primary" onclick="confirmarPagado('{{ pedido.id }}')">Marcar como Pagado</button>
+                        <button class="btn btn-danger" onclick="confirmarCancelar('{{ pedido.id }}')">Cancelar</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info text-center">No hay pedidos disponibles.</div>
+    {% endif %}
+
+    <nav aria-label="Page navigation example" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if pedidos.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ pedidos.previous_page_number }}&query={{ query }}&filtro_cliente={{ filtro_cliente }}&filtro_estado={{ filtro_estado }}">&laquo;</a></li>
+            {% endif %}
+            {% for num in pedidos.paginator.page_range %}
+                <li class="page-item {% if pedidos.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}&query={{ query }}&filtro_cliente={{ filtro_cliente }}&filtro_estado={{ filtro_estado }}">{{ num }}</a>
+                </li>
+            {% endfor %}
+            {% if pedidos.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ pedidos.next_page_number }}&query={{ query }}&filtro_cliente={{ filtro_cliente }}&filtro_estado={{ filtro_estado }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+<footer class="footer text-center py-3 mt-5 bg-dark text-white">
+    <p>© 2024 Restaurante - Administración</p>
+</footer>
+
+<form id="formAceptar" method="post">
+    {% csrf_token %}
+    <div class="modal fade" id="modalAceptar" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Aceptación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">¿Estás seguro de aceptar este pedido?</div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<form id="formCancelar" method="post">
+    {% csrf_token %}
+    <div class="modal fade" id="modalCancelar" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Cancelación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="motivo" class="form-label">Motivo de la cancelación:</label>
+                    <textarea id="motivo" name="motivo_rechazo" class="form-control" rows="3" required></textarea>
+                    <small class="text-muted">Explica por qué se cancela este pedido.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-danger">Cancelar Pedido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<form id="formPagado" method="post">
+    {% csrf_token %}
+    <div class="modal fade" id="modalPagado" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de marcar este pedido como pagado?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Marcar como Pagado</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<script>
+    function confirmarAceptar(pedidoId) {
+        document.getElementById('formAceptar').action = `/ordenes/aceptar/${pedidoId}/`;
+        new bootstrap.Modal(document.getElementById('modalAceptar')).show();
+    }
+    function confirmarPagado(pedidoId) {
+        document.getElementById('formPagado').action = `/ordenes/pagado/${pedidoId}/`;
+        new bootstrap.Modal(document.getElementById('modalPagado')).show();
+    }
+    function confirmarCancelar(pedidoId) {
+        document.getElementById('formCancelar').action = `/ordenes/cancelar/${pedidoId}/`;
+        new bootstrap.Modal(document.getElementById('modalCancelar')).show();
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

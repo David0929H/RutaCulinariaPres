@@ -1,0 +1,148 @@
+{% load static  %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden Actual</title>
+    <link rel="stylesheet" href="{% static 'estilos/styles.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-page">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'pagina_principal' %}" style="font-size: 1.8em; font-weight: bold;">RUTA CULINARIA</a>
+        <div class="user-menu ms-auto">
+            {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ user.username }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'perfil_cliente' %}">Mis Pedidos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'carrito' %}">Ver Carrito</a></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item">Cerrar Sesión</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            {% else %}
+                <a href="{% url 'login_cliente' %}" class="btn btn-outline-primary me-2">Iniciar Sesión</a>
+                <a href="{% url 'registro_cliente' %}" class="btn btn-primary">Registrarse</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<div class="header-image mb-4">
+    <img src="{% static 'imagenes/headernuevo.jpg' %}" alt="Header Image" class="img-fluid w-100">
+</div>
+
+<div class="container mt-5">
+    <div class="card p-4" style="border-radius: 15px;">
+        <h2 class="text-center mb-4">Detalles del Pedido</h2>
+        
+        <form method="POST">
+            {% csrf_token %}
+
+            {% if messages %}
+            <div class="alert alert-danger">
+                <ul>
+                    {% for message in messages %}
+                    <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Plato</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plato in platos %}
+                        <tr>
+                            <td>
+                                <div class="d-flex flex-column align-items-center">
+                                    <span>{{ plato.nombre }}</span>
+                                    <img src="{{ plato.imagen.url }}" alt="{{ plato.nombre }}" class="img-thumbnail mt-2" style="max-height: 150px;">
+                                </div>
+                            </td>
+                            <td>
+                                <input type="number" name="cantidad_{{ plato.id }}" value="1" min="1" class="form-control cantidad-input" data-precio="{{ plato.precio }}" onchange="calcularSubtotal({{ plato.id }})">
+                            </td>
+                            <td>${{ plato.precio|floatformat:0 }}</td>
+                            <td>
+                                <span id="subtotal_{{ plato.id }}">${{ plato.subtotal|floatformat:0 }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-end">Total:</th>
+                            <th><span id="total">${{ total|floatformat:0 }}</span></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="fecha_retiro"><strong>Fecha de Retiro:</strong></label>
+                <input type="date" id="fecha_retiro" name="fecha_retiro" class="form-control">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="hora_retiro"><strong>Hora de Retiro:</strong></label>
+                <input type="time" id="hora_retiro" name="hora_retiro" class="form-control">
+            </div>
+
+
+            <div class="d-flex justify-content-between">
+                <button type="submit" name="guardar_carrito" class="btn btn-secondary">Guardar al Carrito</button>
+                <button type="submit" name="confirmar_pedido" class="btn btn-success">Confirmar Pedido</button>
+                <a href="{% url 'pagina_principal' %}" class="btn btn-danger">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<footer class="footer text-center py-3 mt-5 bg-dark text-white">
+    <p>© 2024 Restaurante</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function calcularSubtotal(platoId) {
+        const cantidadInput = document.querySelector(`input[name="cantidad_${platoId}"]`);
+        const precio = parseFloat(cantidadInput.getAttribute('data-precio'));
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        const subtotalElement = document.getElementById(`subtotal_${platoId}`);
+        const totalElement = document.getElementById('total');
+    
+        // Calcular subtotal del plato
+        const subtotal = precio * cantidad;
+        subtotalElement.textContent = `$${subtotal.toLocaleString('es-CL')}`;
+    
+        // Calcular el total general
+        let total = 0;
+        document.querySelectorAll('.cantidad-input').forEach(input => {
+            const precioInput = parseFloat(input.getAttribute('data-precio'));
+            const cantidadInput = parseInt(input.value) || 0;
+            total += precioInput * cantidadInput;
+        });
+        totalElement.textContent = `$${total.toLocaleString('es-CL')}`;
+    }
+    </script>
+    
+</body>
+</html>
